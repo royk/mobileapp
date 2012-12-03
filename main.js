@@ -1,5 +1,5 @@
 window.W = (function() {
-
+	// Loader: Generic http requests class
 	var Loader = (function() {
 		var _get = function _get(url, params, cb) {
 			params = params || "";
@@ -27,6 +27,7 @@ window.W = (function() {
 		};
 	}());
 
+	// TemplateRepo: Contains and generates html templates
 	var TemplateRepo = (function() {
 		var _construct = function _construct(template, item) {
 			var regexp;
@@ -49,6 +50,7 @@ window.W = (function() {
 
 	}());
 
+	// App: Main business logic of the news app
 	var App = (function() {
 		var _data = null;
 		var _loadData = function _loadData(dataURL, then) {
@@ -82,7 +84,7 @@ window.W = (function() {
 			}
 		};
 	}());
-	
+
 	return {
 		Loader: Loader,
 		App: App,
