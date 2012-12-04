@@ -1,4 +1,6 @@
-window.W = (function() {
+// App agnostic methods and classes
+// Since it's decoupled from our app, we have to ask it nicely for functionality (Mr.Loader, get json please!)
+window.Mr = (function() {
 	// Loader: Generic http requests class
 	var Loader = (function() {
 		var _get = function _get(url, params, cb) {
@@ -16,78 +18,139 @@ window.W = (function() {
 			req.send();
 		};
 		return {
-			get: function get(req, params, cb) {
+			getJSON: function get(req, params, cb) {
 				cb = cb || function(response) { console.log(response); };
 				var onResponse = function onResponse(json) {
 					var result = JSON.parse(json);
 					cb(result);
 				};
 				_get(req, params, onResponse);
+			},
+			get: function get(req, params, cb) {
+				_get(req, params, cb);
 			}
 		};
 	}());
 
-	// TemplateRepo: Contains and generates html templates
-	var TemplateRepo = (function() {
-		var _construct = function _construct(template, item) {
+	// ViewRenderer: Contains and generates html templates
+	var ViewRenderer = (function() {
+		var _viewRepo = {};
+		var _ready = false;
+		
+		var _prepareView = function _prepareView(name, cb) {
+			var viewURL = "/views/"+name+".html";
+			Mr.Loader.get(viewURL, null, function(result) {
+				_viewRepo[name] = result;
+				cb();
+			});
+		};
+		var _construct = function _construct(template, attrObj) {
 			var regexp;
-			for (var attr in item) {
-				regexp = new RegExp("{"+attr+"}", "g");
-				template = template.replace(regexp, item[attr]);
+			var content;
+			
+			for (var attr in attrObj) {
+
+				if (attr.match(/array\d*/gi)) {
+					content = renderArray(attrObj.view, attrObj[attr]);
+				} else {
+					content = attrObj[attr];
+				}
+				template = template.replace(new RegExp("{"+attr+"}", "g"), content);
 			}
 			return template;
 		};
 		return {
-			titleView: function titleView(item) {
-				var _template = "<h2 id='item{index}'>{title}</h2>";
-				return _construct(_template, item);
+			renderView: function renderView(name, attrObj) {
+				return _construct(_viewRepo[name], attrObj);
 			},
-			contentView: function contentView(item) {
-				var _template = "<div style='display:none;' id='content{index}'><h2>{title}</h2><p>{content}</p></div>";
-				return _construct(_template, item);
+
+			renderArray: function renderArray(name, data) {
+				data.forEach(function(item, index) {
+					item.index = index;
+					renderView(name, item);
+				});
+			},
+			// To make our future requests synchronous (and our life easier), we preload all our templates in advance.
+			init: function init(cb) {
+				Mr.async(	{f: _prepareView, args:["title"]},
+							{f: _prepareView, args:["content"]},
+							{f: cb});
+							
 			}
 		};
 
 	}());
+	return {
+		// Classes
+		Loader: Loader,
+		ViewRenderer: ViewRenderer,
+		// Methods
+		async: function async() {
+			var tasks = Array.prototype.slice.call(arguments);
+			var nextTask = function nextTask(result) {
+				if (tasks.length) {
+					var task = tasks.shift();
+					task.args = task.args || [];
+					if (task.f.name!=="nextTask") {
+						if (result) {
+							task.args.unshift(result);
+						}
+						task.args.push(nextTask);
+					}
 
+					var res = task.f.apply(this, task.args);
+					// in case the task wasn't async, trigger next task immediately
+					if (res!==undefined) {
+						nextTask.apply(this, [res]);
+					}
+				}
+			};
+			nextTask();
+		}
+	};
+}());
+// App specific methods and classes
+// Since it's tightly coupled with our implementation, we can approach it casually (yo, app, do stuff!)
+window.Yo = (function() {
 	// App: Main business logic of the news app
 	var App = (function() {
-		var _data = null;
-		var _loadData = function _loadData(dataURL, then) {
-			then = then || function(){ return true; };
-			W.Loader.get(dataURL, "", function(result) {
-				_data = result;
-				then.apply();
-			});
-		};
-		var _populateNews = function _populateNews() {
-			_data.items.forEach(function(item, index) {
+		var _prepareViews = function _prepareViews(data) {
+			var views = [];
+			data.items.forEach(function(item, index) {
 				item.index = index;
-				var title = W.TemplateRepo.titleView(item);
-				var content = W.TemplateRepo.contentView(item);
-				$(title).appendTo($("#newsRepeater")).click(function() {
+				var view = {};
+				view.title = Mr.ViewRenderer.renderView("title", item);
+				view.content = Mr.ViewRenderer.renderView("content", item);
+				views.push(view);
+			});
+			return views;
+		};
+
+		var _populateNews = function _populateNews(data) {
+			var views = _prepareViews(data);
+			views.forEach(function(view, index) {
+				$(view.title).appendTo($("#newsRepeater")).click(function() {
 					if ($('#content'+index).css('display')==="none") {
 						$('#content'+index).fadeIn();
 					} else {
 						$('#content'+index).fadeOut();
 					}
 				});
-				$(content).appendTo($('#item'+index));
+				$(view.content).appendTo($('#item'+index));
 			});
-			
 		};
 		return {
 			init: function init() {
-				_loadData("data.json", 
-					_populateNews
-				);
+				Mr.async(	{f:Mr.ViewRenderer.init},
+							{f:Mr.Loader.getJSON, args:["data.json", null]},
+							{f: _populateNews});
 			}
 		};
 	}());
 
 	return {
-		Loader: Loader,
-		App: App,
-		TemplateRepo: TemplateRepo
+		// Classes
+		App: App
+		// Methods
 	};
 }());
