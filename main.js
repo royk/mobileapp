@@ -14,6 +14,46 @@ window.Mr = (function() {
 		};
 	}());
 
+	var TouchManager = (function() {
+		var _startPos = {};
+		var _offset = {};
+		var _startScroll = 0;
+		return {
+			init: function init() {
+				document.addEventListener('touchstart', function(e) {
+					//e.preventDefault();
+					var touch = e.touches[0];
+					_startPos.x = touch.screenX;
+					_startPos.y = touch.screenY;
+					_offset.x = 0;
+					_offset.y = 0;
+					_startScroll = $(document).scrollTop();
+					$("#log").text("s "+_startPos.y);
+				});
+				document.addEventListener('touchend', function(e) {
+					$("#log").text("e "+_offset.x+" "+_offset.y);
+					if (Math.abs(_offset.x)-5>0 || Math.abs(_offset.y)-5>0) {
+						e.preventDefault();
+						$("#log").text("e ");
+					}
+				});
+				document.addEventListener('touchmove', function(e) {
+					e.preventDefault();
+					var touch = e.touches[0];
+					_offset.x = _startPos.x - touch.screenX;
+					_offset.y = _startPos.y - touch.screenY;
+					var scrollY = _startScroll+_offset.y;
+					// prevent getting stuck beyond bottom
+					if (scrollY<0) {
+						_startPos.y -= scrollY;
+					}
+					$(document).scrollTop(scrollY);
+					$("#log").text("m "+_offset.x+" "+_offset.y);
+				}.bind(this));
+			}
+		};
+	}());
+
 	// ViewRenderer: Contains and generates html templates
 	var ViewRenderer = (function() {
 		var _viewRepo = {};
@@ -61,11 +101,14 @@ window.Mr = (function() {
 			}
 		};
 
+
+
 	}());
 	return {
 		// Classes
 		Loader: Loader,
 		ViewRenderer: ViewRenderer,
+		TouchManager: TouchManager,
 		// Methods
 		async: function async() {
 			var tasks = Array.prototype.slice.call(arguments);
@@ -178,6 +221,7 @@ window.Yo = (function() {
 		};
 		return {
 			init: function init() {
+				Mr.TouchManager.init();
 				_initControls();
 				Mr.async(	{f:Mr.ViewRenderer.init},
 							{f:Mr.Loader.getJSON, args:["data.json", null]},

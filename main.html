@@ -25,7 +25,7 @@
 	}
 	#newsTitles {
 		list-style: none;
-		font-size: 1.6em;
+		font-size: 3.6em;
 		padding-bottom: 52px;
 		
 	}
@@ -65,6 +65,14 @@
 	body {
 		overflow-x: hidden;
 	}
+
+	.console {
+		position: fixed;
+		left: 200px;
+		background-color: white;
+		z-index: 999999;
+		width: 100px;
+	}
 </style>
 <html>
 	<head>
@@ -79,6 +87,14 @@
 		</script>
 	</head>
 	<body>
+	<div class="console">
+		<p id="log">
+			yay
+			yoy
+			yay
+			yoy
+		</p>
+	</div>
 	<div class="page" id="titlesPage">
 		<ul class="container" id="newsTitles" >
 		</ul>
