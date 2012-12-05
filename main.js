@@ -18,11 +18,23 @@ window.Mr = (function() {
 		var _startPos = {};
 		var _offset = {};
 		var _startScroll = 0;
+		var _events = {};
+		var _shouldDispatch = true;
+		var _swipSensitivity = 20;
+		var _dispatch = function _dispatch(eventName, args) {
+			_events[eventName] = _events[eventName] || [];
+			_events[eventName].forEach(function(cb) {
+				cb.apply(this, args);
+			});
+		};
 		return {
+			listen: function listen(eventName, cb) {
+				_events[eventName] = _events[eventName] || [];
+				_events[eventName].push(cb);
+			},
 			init: function init() {
-				document.addEventListener('touchstart', function(e) {
-					//e.preventDefault();
-					var touch = e.touches[0];
+				document.addEventListener('touchstart', function(ev) {
+					var touch = ev.touches[0];
 					_startPos.x = touch.screenX;
 					_startPos.y = touch.screenY;
 					_offset.x = 0;
@@ -30,25 +42,33 @@ window.Mr = (function() {
 					_startScroll = $(document).scrollTop();
 					$("#log").text("s "+_startPos.y);
 				});
-				document.addEventListener('touchend', function(e) {
+				document.addEventListener('touchend', function(ev) {
 					$("#log").text("e "+_offset.x+" "+_offset.y);
+					_shouldDispatch = true;
 					if (Math.abs(_offset.x)-5>0 || Math.abs(_offset.y)-5>0) {
-						e.preventDefault();
+						ev.preventDefault();
 						$("#log").text("e ");
 					}
 				});
-				document.addEventListener('touchmove', function(e) {
-					e.preventDefault();
-					var touch = e.touches[0];
+				document.addEventListener('touchmove', function(ev) {
+					ev.preventDefault();
+					var touch = ev.touches[0];
 					_offset.x = _startPos.x - touch.screenX;
 					_offset.y = _startPos.y - touch.screenY;
-					var scrollY = _startScroll+_offset.y;
-					// prevent getting stuck beyond bottom
-					if (scrollY<0) {
-						_startPos.y -= scrollY;
+					// Horizontal scroll
+					if (Math.abs(_offset.x)>_swipSensitivity && _shouldDispatch) {
+						_shouldDispatch = false;
+						_dispatch("swipe", [{deltaX: _offset.x}]);
+						$("#log").text("swipe event dispatched");
+					} else {
+						// Vertical scroll
+						var scrollY = _startScroll+_offset.y;
+						// prevent getting stuck beyond bottom
+						if (scrollY<0) {
+							_startPos.y -= scrollY;
+						}
+						$(document).scrollTop(scrollY);
 					}
-					$(document).scrollTop(scrollY);
-					$("#log").text("m "+_offset.x+" "+_offset.y);
 				}.bind(this));
 			}
 		};
@@ -141,6 +161,8 @@ window.Yo = (function() {
 	var App = (function() {
 		var _articles;
 		var _currentArticleIndex;
+		var _allowUI = true;
+		
 		var _prepareViews = function _prepareViews(data) {
 			var views = [];
 			data.items.forEach(function(item, index) {
@@ -155,17 +177,55 @@ window.Yo = (function() {
 
 		var _setCurrentArticle = function _setCurrentArticle(index) {
 			_hideCurrentArticle();
-			_currentArticleIndex = index<0 ? _articles.length -1 : index;
-			_currentArticleIndex = index> _articles.length -1 ? 0 : index;
+			_currentArticleIndex = index;
 			_showCurrentArticle();
 		};
 
+		var _showNextArticle = function _showNextArticle() {
+			if (_currentArticleIndex<_articles.length -1) {
+				_allowUI = false;
+				_currentArticle().contentView.css({"left":"0"}).animate({"left": "-100%"}, 500);
+				if (_prevArticle()) _prevArticle().contentView.hide();
+				if (_nextArticle()) _nextArticle().contentView.show().css({"right":"100%"}).animate({"left": "0"}, 500, function() {
+					_allowUI = true;
+					_setCurrentArticle(_currentArticleIndex+1);
+				});
+				
+			}
+		};
+
+		var _showPrevArticle = function _showPrevArticle() {
+			if (_currentArticleIndex>0) {
+				_allowUI = false;
+				_currentArticle().contentView.show().css({"left": "0"}).animate({"left": "100%"}, 500);
+				if (_nextArticle()) _nextArticle().contentView.hide();
+				if (_prevArticle()) _prevArticle().contentView.show().css({"left":"-100%"}).animate({"left": "0"}, 500, function() {
+					_allowUI = true;
+					_setCurrentArticle(_currentArticleIndex-1);
+				});
+			}
+		};
+
+		var _currentArticle = function _currentArticle() {
+			return _articles[_currentArticleIndex];
+		};
+
+		var _nextArticle = function _nextArticle() {
+			return _articles[_currentArticleIndex+1];
+		};
+
+		var _prevArticle = function _prevArticle() {
+			return _articles[_currentArticleIndex-1];
+		};
+
 		var _showCurrentArticle = function _showCurrentArticle() {
-			var article = _articles[_currentArticleIndex];
-			if (article) {
-				article.contentView.show();
+			if (_currentArticle()) {
+				if (_prevArticle()) _prevArticle().contentView.css({"left": "-100%", "right": ""}).show();
+				if (_nextArticle()) _nextArticle().contentView.css({"right": "100%", "left": ""}).show();
+				_currentArticle().contentView.css({"left": "0", "right": "0"}).show();
 				$("#item"+_currentArticleIndex).addClass("selected");
 			}
+			_articles[_currentArticleIndex+1].contentView.addClass("page-right");
 		};
 
 		var _hideCurrentArticle = function _hideCurrentArticle() {
@@ -178,6 +238,9 @@ window.Yo = (function() {
 
 		var _showArticlesPage = function _showArticlesPage() {
 			$(document).scrollTop(0);
+			if (_prevArticle()) _prevArticle().contentView.hide();
+			if (_nextArticle()) _nextArticle().contentView.hide();
+			_currentArticle().contentView.css("left", "0").css("right", "0").show();
 			$("#contentPage").show();
 			$("#contentPage").animate({"left": "0"}, 500, function() {
 				$("#titlesPage").hide();
@@ -185,6 +248,9 @@ window.Yo = (function() {
 		};
 
 		var _showTitlesPage = function _showTitlesPage() {
+			if (_prevArticle()) _prevArticle().contentView.hide();
+			if (_nextArticle()) _nextArticle().contentView.hide();
+			_currentArticle().contentView.css("left", "0").css("right", "0").show();
 			$("#titlesPage").show();
 			$("#contentPage").animate({"left": "100%"}, 500, function() {
 				$("#contentPage").hide();
@@ -193,15 +259,16 @@ window.Yo = (function() {
 
 		var _initControls = function _initControls() {
 			$("#prevButton").click(function() {
-				_setCurrentArticle(_currentArticleIndex-1);
-				
-				
+				if (_allowUI)
+					_showPrevArticle();
 			});
 			$("#nextButton").click(function() {
-				_setCurrentArticle(_currentArticleIndex+1);
+				if (_allowUI)
+					_showNextArticle();
 			});
-			$("#titlesButton").click(function() {
-				_showTitlesPage();
+			$(".titlesButton").click(function() {
+				if (_allowUI)
+					_showTitlesPage();
 			});
 			return null;
 		};
@@ -218,14 +285,27 @@ window.Yo = (function() {
 					_showArticlesPage();
 				});
 			});
+			return null;
+		};
+
+		var _onSwipe = function _onSwipe(ev) {
+			if (_allowUI && $("#contentPage").is(":visible")) {
+				if (ev.deltaX>0) {
+					_showNextArticle();
+				} else {
+					_showPrevArticle();
+				}
+			}
 		};
 		return {
 			init: function init() {
 				Mr.TouchManager.init();
-				_initControls();
+				Mr.TouchManager.listen("swipe", _onSwipe);
+				
 				Mr.async(	{f:Mr.ViewRenderer.init},
 							{f:Mr.Loader.getJSON, args:["data.json", null]},
-							{f: _populateNews});
+							{f: _populateNews},
+							{f: _initControls});
 			}
 		};
 	}());

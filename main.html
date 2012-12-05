@@ -50,7 +50,8 @@
 		position: fixed;
 		bottom:0px;
 		width: 100%;
-		background-color: #AAA;
+		height: 85px;
+		background: url('ui.png') 0 85px;
 		left: 0;
 	}
 	.nav ul {
@@ -62,11 +63,39 @@
 		padding-right: 10px;
 		padding-left: 10px;
 	}
+	#prevButton {
+		width: 20px;
+		height: 40px;
+		background: url('ui.png') -144px -20px;
+		margin-right: 20px;
+	}
+	#nextButton {
+		width: 20px;
+		height: 40px;
+		background: url('ui.png') -180px -20px;
+	}
+	.titlesButton {
+		width: 70px;
+		height: 80px;
+		background: url('ui.png') 0 0;
+		display: inline-block;
+	}
+	.content {
+		position: absolute;
+		width: 100%;
+	}
+	.content-title {
+		display: inline;
+		position: relative;
+		top: -30px;
+		left: 5px;
+	}
 	body {
 		overflow-x: hidden;
 	}
 
 	.console {
+		display: none;
 		position: fixed;
 		left: 200px;
 		background-color: white;
@@ -89,10 +118,6 @@
 	<body>
 	<div class="console">
 		<p id="log">
-			yay
-			yoy
-			yay
-			yoy
 		</p>
 	</div>
 	<div class="page" id="titlesPage">
@@ -102,13 +127,14 @@
 
 	<content class="page page-right" id="contentPage">
 		<div class="container" id="newsContent">
+			
 		</div>
 	</content>
 	<div class="nav">
 		<ul>
-			<li id="prevButton">L</li>
-			<li id="nextButton">R</li>
-			<li id="titlesButton">T</li>
+			<li id="prevButton"></li>
+			<li id="nextButton"></li>
+			
 		</ul>
 		</div>
 	</body>
