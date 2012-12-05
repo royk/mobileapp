@@ -23,12 +23,13 @@ window.Mr = (function() {
 		};
 	}());
 
+	// TouchManager: Updates scroll and notifies on swipes.
 	var TouchManager = (function() {
 		var _startPos = {};
 		var _offset = {};
 		var _startScroll = 0;
 		var _events = {};
-		var _shouldDispatch = true;
+		var _swipeInProgress = false;
 		var _swipSensitivity = 20;
 		var _dispatch = function _dispatch(eventName, args) {
 			_events[eventName] = _events[eventName] || [];
@@ -49,14 +50,11 @@ window.Mr = (function() {
 					_offset.x = 0;
 					_offset.y = 0;
 					_startScroll = $(document).scrollTop();
-					$("#log").text("s "+_startPos.y);
 				});
 				document.addEventListener('touchend', function(ev) {
-					$("#log").text("e "+_offset.x+" "+_offset.y);
-					_shouldDispatch = true;
+					_swipeInProgress = false;
 					if (Math.abs(_offset.x)-5>0 || Math.abs(_offset.y)-5>0) {
 						ev.preventDefault();
-						$("#log").text("e ");
 					}
 				});
 				document.addEventListener('touchmove', function(ev) {
@@ -65,12 +63,11 @@ window.Mr = (function() {
 					_offset.x = _startPos.x - touch.screenX;
 					_offset.y = _startPos.y - touch.screenY;
 					// Horizontal scroll
-					if (Math.abs(_offset.x)>_swipSensitivity && _shouldDispatch) {
-						_shouldDispatch = false;
+					if (Math.abs(_offset.x)>_swipSensitivity && !_swipeInProgress) {
+						_swipeInProgress = true;
 						_dispatch("swipe", [{deltaX: _offset.x}]);
-						$("#log").text("swipe event dispatched");
+					// Vertical scroll. If swipe ocurred, we can ignore vertical scrolls.
 					} else {
-						// Vertical scroll
 						var scrollY = _startScroll+_offset.y;
 						// prevent getting stuck beyond bottom
 						if (scrollY<0) {
