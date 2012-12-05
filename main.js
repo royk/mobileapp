@@ -3,31 +3,13 @@
 window.Mr = (function() {
 	// Loader: Generic http requests class
 	var Loader = (function() {
-		var _get = function _get(url, params, cb) {
-			params = params || "";
-			var req = new XMLHttpRequest();
-			req.onreadystatechange = function(){
-				if (req.readyState==4 && req.status==200){
-					cb(req.responseText);
-				}
-			};
-			if (params) {
-				url += "?" + params;
-			}
-			req.open("GET", url, true);
-			req.send();
-		};
+		
 		return {
 			getJSON: function get(req, params, cb) {
-				cb = cb || function(response) { console.log(response); };
-				var onResponse = function onResponse(json) {
-					var result = JSON.parse(json);
-					cb(result);
-				};
-				_get(req, params, onResponse);
+				$.getJSON(req, params, cb);
 			},
 			get: function get(req, params, cb) {
-				_get(req, params, cb);
+				$.get(req, params, cb);
 			}
 		};
 	}());
@@ -114,6 +96,8 @@ window.Mr = (function() {
 window.Yo = (function() {
 	// App: Main business logic of the news app
 	var App = (function() {
+		var _articles;
+		var _currentArticleIndex;
 		var _prepareViews = function _prepareViews(data) {
 			var views = [];
 			data.items.forEach(function(item, index) {
@@ -126,21 +110,75 @@ window.Yo = (function() {
 			return views;
 		};
 
+		var _setCurrentArticle = function _setCurrentArticle(index) {
+			_hideCurrentArticle();
+			_currentArticleIndex = index<0 ? _articles.length -1 : index;
+			_currentArticleIndex = index> _articles.length -1 ? 0 : index;
+			_showCurrentArticle();
+		};
+
+		var _showCurrentArticle = function _showCurrentArticle() {
+			var article = _articles[_currentArticleIndex];
+			if (article) {
+				article.contentView.show();
+				$("#item"+_currentArticleIndex).addClass("selected");
+			}
+		};
+
+		var _hideCurrentArticle = function _hideCurrentArticle() {
+			var article = _articles[_currentArticleIndex];
+			if (article) {
+				article.contentView.hide();
+				$("#item"+_currentArticleIndex).removeClass("selected");
+			}
+		};
+
+		var _showArticlesPage = function _showArticlesPage() {
+			$(document).scrollTop(0);
+			$("#contentPage").show();
+			$("#contentPage").animate({"left": "0"}, 500, function() {
+				$("#titlesPage").hide();
+			});
+		};
+
+		var _showTitlesPage = function _showTitlesPage() {
+			$("#titlesPage").show();
+			$("#contentPage").animate({"left": "100%"}, 500, function() {
+				$("#contentPage").hide();
+			});
+		};
+
+		var _initControls = function _initControls() {
+			$("#prevButton").click(function() {
+				_setCurrentArticle(_currentArticleIndex-1);
+				
+				
+			});
+			$("#nextButton").click(function() {
+				_setCurrentArticle(_currentArticleIndex+1);
+			});
+			$("#titlesButton").click(function() {
+				_showTitlesPage();
+			});
+			return null;
+		};
+
 		var _populateNews = function _populateNews(data) {
-			var views = _prepareViews(data);
-			views.forEach(function(view, index) {
-				$(view.title).appendTo($("#newsRepeater")).click(function() {
-					if ($('#content'+index).css('display')==="none") {
-						$('#content'+index).fadeIn();
-					} else {
-						$('#content'+index).fadeOut();
-					}
+			_articles = _prepareViews(data);
+			_articles.forEach(function(article, index) {
+				article.titleView = $(article.title).appendTo($("#newsTitles"));
+				article.contentView = $(article.content).appendTo($('#newsContent')).hide();
+				article.titleView.click(function() {
+					_hideCurrentArticle();
+					_currentArticleIndex = index;
+					_showCurrentArticle();
+					_showArticlesPage();
 				});
-				$(view.content).appendTo($('#item'+index));
 			});
 		};
 		return {
 			init: function init() {
+				_initControls();
 				Mr.async(	{f:Mr.ViewRenderer.init},
 							{f:Mr.Loader.getJSON, args:["data.json", null]},
 							{f: _populateNews});

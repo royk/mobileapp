@@ -1,3 +1,71 @@
+<style type="text/css">
+	.wrapper {
+		width: 100%;
+		height: 100%;
+		left: 0;
+		top: 0;
+
+	}
+	.page {
+		position: absolute;
+		width: 100%;
+		height: 100%;
+		
+		margin: 0;
+		display: table;
+		left: 0;
+		top: 0;
+	}
+	.container {
+		background-color: #C9C9C9;
+		width: 100%;
+		height: 100%;
+		left: 0;
+		top: 0;
+	}
+	#newsTitles {
+		list-style: none;
+		font-size: 1.6em;
+		padding-bottom: 52px;
+		
+	}
+	.title {
+		padding-top: 20px;
+		padding-bottom: 20px;
+		border-top: 1px;
+		border-color: black;
+		border-top-style: solid;
+		color: black;
+	}
+	.title.selected {
+		color: #792796;
+	}
+	.page-right {
+		left: 100%;
+	}
+	.page-left {
+		left: -100%;
+	}
+	.nav {
+		position: fixed;
+		bottom:0px;
+		width: 100%;
+		background-color: #AAA;
+		left: 0;
+	}
+	.nav ul {
+		list-style: none;
+		display: table;
+	}
+	.nav li {
+		float: left;
+		padding-right: 10px;
+		padding-left: 10px;
+	}
+	body {
+		overflow-x: hidden;
+	}
+</style>
 <html>
 	<head>
 		<title>Mobile news reader</title>
@@ -5,12 +73,27 @@
 		<script src="http://code.jquery.com/jquery-1.8.3.min.js">
 		</script>
 		<script>
-			Yo.App.init();
+			$(document).ready(function() {
+				Yo.App.init();
+			});
 		</script>
 	</head>
 	<body>
-		<content id="newsRepeater">
-			
-		</content>
+	<div class="page" id="titlesPage">
+		<ul class="container" id="newsTitles" >
+		</ul>
+	</div>
+
+	<content class="page page-right" id="contentPage">
+		<div class="container" id="newsContent">
+		</div>
+	</content>
+	<div class="nav">
+		<ul>
+			<li id="prevButton">L</li>
+			<li id="nextButton">R</li>
+			<li id="titlesButton">T</li>
+		</ul>
+		</div>
 	</body>
 </html>
