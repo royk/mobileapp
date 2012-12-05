@@ -6,7 +6,16 @@ window.Mr = (function() {
 		
 		return {
 			getJSON: function get(req, params, cb) {
-				$.getJSON(req, params, cb);
+				var cached = localStorage.getItem(req);
+				if (cached) {
+					cb(JSON.parse(cached));
+				}
+				else {
+					$.getJSON(req, params, function(result) {
+						localStorage.setItem(req, JSON.stringify(result));
+						cb(result);
+					});
+				}
 			},
 			get: function get(req, params, cb) {
 				$.get(req, params, cb);
@@ -162,7 +171,7 @@ window.Yo = (function() {
 		var _articles;
 		var _currentArticleIndex;
 		var _allowUI = true;
-		
+
 		var _prepareViews = function _prepareViews(data) {
 			var views = [];
 			data.items.forEach(function(item, index) {
